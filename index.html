@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我的电影收藏</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #16a34a;
+      --green-dark: #15803d;
+      --ink: #14231a;
+      --muted: #6b8a76;
+    }
+
+    html { background: #eef4ee; }
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      background: transparent;
+      color: var(--ink);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ===== 背景：一层固定的模糊彩色光斑 ===== */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -6%;
+      z-index: -2;
+      background:
+        radial-gradient(54% 60% at 6% 2%,   rgba(142, 211, 164, .92) 0%, rgba(142, 211, 164, 0) 68%),
+        radial-gradient(50% 56% at 94% 4%,  rgba(127, 202, 192, .88) 0%, rgba(127, 202, 192, 0) 68%),
+        radial-gradient(58% 62% at 98% 80%, rgba(166, 206, 232, .88) 0%, rgba(166, 206, 232, 0) 70%),
+        radial-gradient(56% 62% at 2% 94%,  rgba(239, 217, 164, .92) 0%, rgba(239, 217, 164, 0) 70%),
+        radial-gradient(36% 40% at 50% 44%, rgba(255, 255, 255, .55) 0%, rgba(255, 255, 255, 0) 72%),
+        linear-gradient(155deg, #dcece1 0%, #f4f8f1 50%, #dcecea 100%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; }
+
+    /* ===== 顶部导航 ===== */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 64px;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, .82);
+      border-bottom: 1px solid rgba(255, 255, 255, .6);
+    }
+
+    .logo { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+
+    .nav-links { display: flex; gap: 6px; }
+
+    .nav-links a {
+      padding: 8px 14px;
+      font-size: 14px;
+      color: var(--muted);
+      border-radius: 10px;
+      transition: .18s;
+    }
+
+    .nav-links a:hover { color: var(--ink); background: #eef7f1; }
+
+    .nav-links a.active { color: #fff; background: var(--green); }
+
+    /* ===== 页面容器 ===== */
+    .container { max-width: 940px; margin: 0 auto; padding: 34px 20px 80px; }
+
+    /* ===== 首页主框 ===== */
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      align-items: center;
+      gap: 20px;
+      padding: 48px 44px 0;
+      margin-bottom: 46px;
+      border-radius: 26px;
+      background: radial-gradient(130% 150% at 0% 0%, #1d5439 0%, #123524 48%, #0a1f17 100%);
+      color: #eaf7ef;
+      overflow: hidden;
+      box-shadow: 0 30px 70px rgba(15, 60, 40, .22);
+    }
+
+    .hero h1 {
+      font-size: 40px;
+      line-height: 1.22;
+      letter-spacing: .5px;
+      margin-bottom: 12px;
+    }
+
+    .hero-text {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      padding-top: 34px;
+    }
+
+    .hero-text .btn {
+      align-self: flex-start;
+      margin: auto 0;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 13px 26px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #0b2c1e;
+      background: #7bf1a8;
+      border-radius: 14px;
+      transition: .18s;
+    }
+
+    .btn:hover { background: #9cf7c0; transform: translateY(-1px); }
+
+    /* 右侧三张海报叠放 */
+    .hero-posters {
+      position: relative;
+      height: 300px;
+      min-width: 300px;
+    }
+
+    .hero-posters img {
+      position: absolute;
+      width: 150px;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 12px;
+      box-shadow: 0 22px 44px rgba(0, 0, 0, .5);
+    }
+
+    .hero-posters img:nth-child(1) { left: 0;    top: 44px; transform: rotate(-9deg); }
+    .hero-posters img:nth-child(2) { left: 94px; top: 8px;  transform: rotate(-1deg); z-index: 2; }
+    .hero-posters img:nth-child(3) { left: 188px; top: 44px; transform: rotate(9deg); }
+
+    /* ===== 区块标题 ===== */
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title { font-size: 20px; }
+
+    /* ===== 收藏夹：简化卡片 ===== */
+    .fav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+
+    .fav-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px 10px 10px;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(21, 60, 40, .06);
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+
+    .fav-card:hover {
+      border-color: #bfe6cd;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(21, 128, 61, .10);
+    }
+
+    .fav-poster {
+      flex: none;
+      width: 58px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 9px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    }
+
+    .fav-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .fav-title { font-size: 15px; font-weight: 700; }
+    .fav-meta { font-size: 12.5px; color: var(--muted); }
+
+    /* ===== 页面标题 ===== */
+    .page-title { font-size: 28px; margin-bottom: 6px; }
+    .list-title { margin-bottom: 26px; }
+    .page-desc { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+
+    /* ===== 搜索框 ===== */
+    .search {
+      display: block;
+      width: 100%;
+      height: 46px;
+      padding: 0 16px;
+      margin-bottom: 10px;
+      font-size: 15px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .92);
+      border: 2px solid rgba(255, 255, 255, .9);
+      border-radius: 13px;
+      outline: none;
+      transition: .2s;
+    }
+
+    .search:focus { border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, .12); }
+
+    .count { font-size: 13px; color: #8aa89a; margin-bottom: 16px; }
+
+    /* ===== 电影列表：movie-card.html 的卡片效果 ===== */
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+      gap: 16px;
+    }
+
+    .movie-card {
+      display: flex;
+      flex-direction: column;
+      padding: 14px 14px 16px;
+      background: rgba(255, 255, 255, .88);
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(21, 60, 40, .08);
+      transition: transform .25s, box-shadow .25s;
+    }
+
+    .movie-card:hover {
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+      transform: translateY(-6px);
+    }
+
+    .movie-poster {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 9px;
+    }
+
+    .movie-card h2 {
+      margin: 12px 0 4px;
+      text-align: center;
+      font-size: 17px;
+    }
+
+    .movie-meta {
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 12.5px;
+      color: #8aa89a;
+    }
+
+    .movie-synopsis {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #555;
+      text-align: justify;
+    }
+
+    .empty {
+      padding: 54px 0;
+      text-align: center;
+      font-size: 14px;
+      color: #9ab8a8;
+    }
+
+    /* ===== 详情页 ===== */
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      color: #4b7a5f;
+      background: rgba(255, 255, 255, .88);
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .18s;
+    }
+
+    .back:hover { border-color: #a9dfbd; color: var(--green-dark); }
+
+    .detail-card {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
+      padding: 30px;
+      background: rgba(255, 255, 255, .9);
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 22px;
+      box-shadow: 0 18px 50px rgba(21, 60, 40, .1);
+    }
+
+    .detail-poster {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 14px;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, .22);
+    }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .detail-top h1 { font-size: 30px; }
+
+    .fav-badge {
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #b45309;
+      background: #fef3c7;
+      border-radius: 999px;
+    }
+
+    .fav-btn {
+      margin-top: 18px;
+      padding: 9px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #15803d;
+      background: #eef9f2;
+      border: 1px solid #bfe6cd;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: .18s;
+    }
+
+    .fav-btn:hover { background: #ddf3e6; }
+
+    .fav-btn.on {
+      color: #b45309;
+      background: #fef3c7;
+      border-color: #f0d08a;
+    }
+
+    .en {
+      margin-bottom: 16px;
+      font-size: 13px;
+      letter-spacing: .4px;
+      color: #9ab8a8;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chip {
+      padding: 5px 11px;
+      font-size: 12.5px;
+      color: #3f6f52;
+      background: #eef9f2;
+      border: 1px solid #d7efdf;
+      border-radius: 999px;
+    }
+
+    .detail-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 22px 0;
+    }
+
+    .detail-rows p { font-size: 14px; color: #3c5647; }
+    .detail-rows span { display: inline-block; width: 52px; color: #8aa89a; }
+
+    .synopsis {
+      font-size: 14.5px;
+      line-height: 1.9;
+      color: #3c5647;
+      text-align: justify;
+    }
+
+    footer {
+      padding: 24px;
+      text-align: center;
+      font-size: 12.5px;
+      color: #a8c0b3;
+    }
+
+    @media (max-width: 760px) {
+      .nav { padding: 0 16px; }
+      .hero { grid-template-columns: 1fr; padding: 34px 26px; }
+      .hero h1 { font-size: 30px; }
+      .hero-text { padding-top: 0; }
+
+      /* 手机上不再隐藏海报，缩成一排放在按钮下方 */
+      .hero-posters {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        height: 200px;
+        margin-top: 18px;
+      }
+
+      .hero-posters img {
+        width: clamp(78px, 25vw, 104px);
+        border-radius: 9px;
+        box-shadow: 0 14px 28px rgba(0, 0, 0, .45);
+      }
+
+      .hero-posters img:nth-child(1) { left: 50%; top: 26px; transform: translateX(-140%) rotate(-10deg); }
+      .hero-posters img:nth-child(2) { left: 50%; top: 0;    transform: translateX(-50%) rotate(-1deg); z-index: 2; }
+      .hero-posters img:nth-child(3) { left: 50%; top: 26px; transform: translateX(40%) rotate(10deg); }
+
+      .detail-card { grid-template-columns: 1fr; padding: 22px; }
+      .detail-poster { max-width: 230px; }
+      .detail-top h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="./lib/react.js"></script>
+  <script src="./lib/react-dom.js"></script>
+  <script src="./lib/react-router-dom.js"></script>
+  <script src="./lib/babel.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { HashRouter, Switch, Route, Link, NavLink, useParams, useHistory, useLocation } = ReactRouterDOM;
+
+    /* =========================================================
+       一、电影数据（6 部，海报用桌面练习文件夹里的图）
+       ========================================================= */
+    const MOVIES = [
+      {
+        id: 1,
+        title: "生活多美好",
+        en: "It's a Wonderful Life",
+        year: 1946,
+        genre: "剧情 / 家庭 / 奇幻",
+        director: "弗兰克·卡普拉",
+        directorEn: "Frank Capra",
+        cast: "詹姆斯·斯图尔特 / 唐娜·里德",
+        duration: 130,
+        rating: 9.3,
+        poster: "./img/p771490367.webp",
+        favorite: true,
+        synopsis: "圣诞夜，乔治·贝利在绝望中准备结束自己的一生。上帝派来的天使带他看见：如果自己从未出生，这座小镇和那些被他帮助过的人会变成什么样子。",
+      },
+      {
+        id: 2,
+        title: "星际穿越",
+        en: "Interstellar",
+        year: 2014,
+        genre: "科幻 / 剧情 / 冒险",
+        director: "克里斯托弗·诺兰",
+        directorEn: "Christopher Nolan",
+        cast: "马修·麦康纳 / 安妮·海瑟薇 / 杰西卡·查斯坦",
+        duration: 169,
+        rating: 9.4,
+        poster: "./img/p2917313557.webp",
+        synopsis: "地球环境持续恶化，前 NASA 宇航员库珀穿越虫洞，为人类寻找新的家园。时间在不同星球上流速不同，他必须在回家与拯救人类之间做出选择。",
+      },
+      {
+        id: 3,
+        title: "爱在黎明破晓前",
+        en: "Before Sunrise",
+        year: 1995,
+        genre: "爱情 / 剧情",
+        director: "理查德·林克莱特",
+        directorEn: "Richard Linklater",
+        cast: "伊桑·霍克 / 朱莉·德尔佩",
+        duration: 101,
+        rating: 8.8,
+        poster: "./img/p2555762374.webp",
+        favorite: true,
+        synopsis: "两个陌生人在开往维也纳的火车上相遇，决定一起下车，用一夜时间散步、聊天。天亮之前，他们想把一生的话都说完。",
+      },
+      {
+        id: 4,
+        title: "心灵奇旅",
+        en: "Soul",
+        year: 2020,
+        genre: "动画 / 奇幻 / 音乐",
+        director: "彼特·道格特",
+        directorEn: "Pete Docter",
+        cast: "杰米·福克斯 / 蒂娜·菲",
+        duration: 100,
+        rating: 8.7,
+        poster: "./img/p2629400933.webp",
+        synopsis: "爵士钢琴师乔终于等到梦寐以求的演出机会，却在当晚掉进下水道，来到「生之来处」。在那里，他遇到了一个死活不愿意投胎的灵魂 。",
+      },
+      {
+        id: 5,
+        title: "放牛班的春天",
+        en: "Les Choristes",
+        year: 2004,
+        genre: "剧情 / 音乐",
+        director: "克里斯托夫·巴拉蒂",
+        directorEn: "Christophe Barratier",
+        cast: "热拉尔·朱尼奥 / 让-巴蒂斯特·莫尼耶",
+        duration: 97,
+        rating: 9.3,
+        poster: "./img/p2884341294.webp",
+        synopsis: "音乐老师马修来到「池塘之底」寄宿学校，面对的是一群被放弃的问题少年。他没有惩罚他们，而是组建了一支合唱团。",
+      },
+      {
+        id: 6,
+        title: "美丽人生",
+        en: "Life Is Beautiful",
+        year: 1997,
+        genre: "剧情 / 喜剧 / 战争",
+        director: "罗伯托·贝尼尼",
+        directorEn: "Roberto Benigni",
+        cast: "罗伯托·贝尼尼 / 尼可莱塔·布拉斯基",
+        duration: 116,
+        rating: 9.5,
+        poster: "./img/p510861873.webp",
+        favorite: true,
+        synopsis: "圭多带着年幼的儿子被关进集中营，他把这一切编成一场积分游戏，只为让孩子相信：世界依然是好的。",
+      },
+    ];
+
+    /* =========================================================
+       顶部导航
+       ========================================================= */
+    function Navbar() {
+      return (
+        <nav className="nav">
+          <Link className="logo" to="/">我的电影收藏</Link>
+          <div className="nav-links">
+            <NavLink to="/" exact activeClassName="active">首页</NavLink>
+            <NavLink to="/movies" activeClassName="active">电影列表</NavLink>
+          </div>
+        </nav>
+      );
+    }
+
+    /* =========================================================
+       首页：主框 + 收藏夹
+       ========================================================= */
+    function Home({ favorites }) {
+      const favoriteMovies = MOVIES.filter(m => favorites.includes(m.id));
+      const heroPosters = favoriteMovies.slice(0, 3);
+
+      return (
+        <div>
+          {/* 主框 */}
+          <section className="hero">
+            <div className="hero-text">
+              <h1>我最爱的电影</h1>
+              <Link className="btn" to="/movies">进入电影列表 →</Link>
+            </div>
+
+            <div className="hero-posters">
+              {heroPosters.map(m => (
+                <img key={m.id} src={m.poster} alt={m.title} />
+              ))}
+            </div>
+          </section>
+
+          {/* 收藏夹 */}
+          <div className="section-head">
+            <h2 className="section-title">收藏夹</h2>
+          </div>
+
+          {favoriteMovies.length === 0 ? (
+            <p className="empty">收藏夹是空的</p>
+          ) : (
+            <div className="fav-grid">
+              {favoriteMovies.map(m => (
+                <Link key={m.id} className="fav-card" to={"/movies/" + m.id}>
+                  <img className="fav-poster" src={m.poster} alt={m.title} />
+                  <div className="fav-info">
+                    <span className="fav-title">{m.title}</span>
+                    <span className="fav-meta">{m.year} · {m.genre} · {m.rating}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* =========================================================
+       电影列表：搜索框 + 卡片网格
+       ========================================================= */
+    function MovieList() {
+      const location = useLocation();
+      const history = useHistory();
+
+      // 搜索词从网址的 ?q= 里读，刷新/分享都不会丢
+      const keyword = new URLSearchParams(location.search).get("q") || "";
+      const kw = keyword.trim().toLowerCase();
+
+      const matched = MOVIES.filter(m =>
+        m.title.includes(keyword) ||
+        m.en.toLowerCase().includes(kw) ||
+        m.genre.includes(keyword) ||
+        m.director.includes(keyword) ||
+        m.directorEn.toLowerCase().includes(kw)
+      );
+
+      // 输入时只改网址，不存 state
+      function handleChange(e) {
+        const value = e.target.value;
+        history.replace(value ? "/movies?q=" + encodeURIComponent(value) : "/movies");
+      }
+
+      return (
+        <div>
+          <h1 className="page-title list-title">电影列表</h1>
+
+          <input
+            className="search"
+            value={keyword}
+            onChange={handleChange}
+            placeholder="搜片名、导演或类型，比如「诺兰」「Nolan」"
+          />
+
+          <p className="count">
+            {keyword ? `找到 ${matched.length} 部电影` : `共 ${MOVIES.length} 部电影`}
+          </p>
+
+          {matched.length === 0 ? (
+            <p className="empty">没有找到和「{keyword}」有关的电影</p>
+          ) : (
+            <div className="movie-grid">
+              {matched.map(m => (
+                <Link key={m.id} className="movie-card" to={"/movies/" + m.id}>
+                  <img className="movie-poster" src={m.poster} alt={m.title} />
+                  <h2>{m.title}</h2>
+                  <p className="movie-meta">{m.year} · {m.genre} ·  {m.rating}</p>
+                  <p className="movie-synopsis">{m.synopsis}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* =========================================================
+       电影详情
+       ========================================================= */
+    function MovieDetail({ favorites, toggleFavorite }) {
+      const { id } = useParams();
+      const history = useHistory();
+
+      const movie = MOVIES.find(m => m.id === Number(id));
+      const isFavorite = favorites.includes(Number(id));
+
+      if (!movie) {
+        return (
+          <div>
+            <h1 className="page-title">找不到这部电影</h1>
+            <p className="page-desc">网址里的编号 {id} 不存在。</p>
+            <Link className="btn" to="/movies">返回列表</Link>
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <button className="back" onClick={() => history.goBack()}>← 返回上一页</button>
+
+          <div className="detail-card">
+            <img className="detail-poster" src={movie.poster} alt={movie.title} />
+
+            <div>
+              <div className="detail-top">
+                <h1>{movie.title}</h1>
+                {isFavorite && <span className="fav-badge">收藏夹</span>}
+              </div>
+
+              <p className="en">{movie.en}</p>
+
+              <div className="chips">
+                <span className="chip">{movie.year}</span>
+                <span className="chip">{movie.genre}</span>
+                <span className="chip">{movie.duration} 分钟</span>
+                <span className="chip">{movie.rating}</span>
+              </div>
+
+              <button
+                className={"fav-btn" + (isFavorite ? " on" : "")}
+                onClick={() => toggleFavorite(movie.id)}
+              >
+                {isFavorite ? "已收藏" : "收藏"}
+              </button>
+
+              <div className="detail-rows">
+                <p><span>导演</span>{movie.director}</p>
+                <p><span>主演</span>{movie.cast}</p>
+              </div>
+
+              <p className="synopsis">{movie.synopsis}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* =========================================================
+       404
+       ========================================================= */
+    function NotFound() {
+      return (
+        <div>
+          <h1 className="page-title">404 · 页面不存在</h1>
+          <p className="page-desc">这个网址没有对应的页面，可能地址打错了。</p>
+          <Link className="btn" to="/">回首页</Link>
+        </div>
+      );
+    }
+
+    /* =========================================================
+       总装
+       ========================================================= */
+    function App() {
+      // 收藏的 id 列表：优先读 localStorage，没有就用数据里的默认收藏
+      const [favorites, setFavorites] = useState(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem("movie-favorites"));
+          if (Array.isArray(saved)) return saved;
+        } catch (e) {
+          // 存储内容坏掉时忽略，用默认值
+        }
+        return MOVIES.filter(m => m.favorite).map(m => m.id);
+      });
+
+      // 收藏一变，就写回 localStorage
+      useEffect(() => {
+        localStorage.setItem("movie-favorites", JSON.stringify(favorites));
+      }, [favorites]);
+
+      function toggleFavorite(id) {
+        setFavorites(prev =>
+          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+      }
+
+      return (
+        <HashRouter>
+          <Navbar />
+
+          <main className="container">
+            <Switch>
+              <Route path="/" exact render={() => <Home favorites={favorites} />} />
+              <Route path="/movies" exact component={MovieList} />
+              <Route path="/movies/:id" render={() => (
+                <MovieDetail favorites={favorites} toggleFavorite={toggleFavorite} />
+              )} />
+              <Route path="*" component={NotFound} />
+            </Switch>
+          </main>
+
+          <footer>电影收藏</footer>
+        </HashRouter>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
